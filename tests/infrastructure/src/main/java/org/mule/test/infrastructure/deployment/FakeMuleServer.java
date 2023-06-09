@@ -136,7 +136,9 @@ public class FakeMuleServer {
                                                muleArtifactResourcesRegistry.getToolingApplicationDescriptorFactory());
     deploymentService = new MuleDeploymentService(muleArtifactResourcesRegistry.getDomainFactory(),
                                                   muleArtifactResourcesRegistry.getApplicationFactory(),
-                                                  () -> findSchedulerService(serviceManager));
+                                                  () -> findSchedulerService(serviceManager),
+                                                  false,
+                                                  null);
     deploymentListener = mock(DeploymentListener.class);
     deploymentService.addDeploymentListener(deploymentListener);
     domainDeploymentListener = mock(DeploymentListener.class);

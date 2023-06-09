@@ -32,12 +32,16 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import static org.apache.logging.log4j.LogManager.getFactory;
 
+import org.mule.module.io.internal.IntegrationOrchestratorAPI;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.i18n.I18nMessage;
 import org.mule.runtime.api.lifecycle.InitialisationException;
+import org.mule.runtime.api.service.Service;
+import org.mule.runtime.api.service.ServiceRepository;
 import org.mule.runtime.core.internal.context.DefaultMuleContext;
 import org.mule.runtime.core.internal.lock.ServerLockFactory;
+import org.mule.runtime.http.api.HttpService;
 import org.mule.runtime.module.artifact.activation.api.extension.discovery.ExtensionModelLoaderRepository;
 import org.mule.runtime.module.artifact.api.classloader.ArtifactClassLoader;
 import org.mule.runtime.module.artifact.api.classloader.net.MuleArtifactUrlStreamHandler;
@@ -99,6 +103,7 @@ public class DefaultMuleContainer implements MuleContainer {
   private final ToolingService toolingService;
   private final MuleCoreExtensionManagerServer coreExtensionManager;
   private final TroubleshootingService troubleshootingService;
+  private final IntegrationOrchestratorAPI integrationOrchestratorAPI;
   private ServerLockFactory muleLockFactory;
   private final MuleArtifactResourcesRegistry artifactResourcesRegistry = new MuleArtifactResourcesRegistry.Builder()
       .artifactConfigurationProcessor(serializedAstWithFallbackArtifactConfigurationProcessor())
@@ -121,6 +126,8 @@ public class DefaultMuleContainer implements MuleContainer {
 
   private final ServiceManager serviceManager;
   private final ExtensionModelLoaderRepository extensionModelLoaderRepository;
+  private boolean embeddedMode = false;
+  private boolean voltronMode;
 
   /**
    * Application entry point (used only for experimentation purposes).
@@ -142,7 +149,9 @@ public class DefaultMuleContainer implements MuleContainer {
 
     this.deploymentService = new MuleDeploymentService(artifactResourcesRegistry.getDomainFactory(),
                                                        artifactResourcesRegistry.getApplicationFactory(),
-                                                       () -> findSchedulerService(serviceManager));
+                                                       () -> findSchedulerService(serviceManager),
+                                                       voltronMode,
+                                                       artifactResourcesRegistry.getIntegrationFactory());
     this.troubleshootingService = new DefaultTroubleshootingService(deploymentService);
     this.repositoryService = new RepositoryServiceFactory().createRepositoryService();
 
@@ -155,18 +164,28 @@ public class DefaultMuleContainer implements MuleContainer {
                                                                               .getContainerClassLoader()),
                                                                           new ReflectionMuleCoreExtensionDependencyResolver());
     this.muleLockFactory = artifactResourcesRegistry.getRuntimeLockFactory();
+    this.integrationOrchestratorAPI =
+        new IntegrationOrchestratorAPI(() -> findHttpService(serviceManager), this.deploymentService);
 
     artifactResourcesRegistry.getContainerClassLoader().dispose();
   }
+
+
 
   public DefaultMuleContainer(DeploymentService deploymentService, RepositoryService repositoryService,
                               ToolingService toolingService,
                               MuleCoreExtensionManagerServer coreExtensionManager, ServiceManager serviceManager,
                               ExtensionModelLoaderRepository extensionModelLoaderRepository,
-                              TroubleshootingService troubleshootingService)
+                              TroubleshootingService troubleshootingService,
+                              IntegrationOrchestratorAPI integrationOrchestratorAPI)
       throws InitialisationException {
     this(new String[0], deploymentService, repositoryService, toolingService, coreExtensionManager, serviceManager,
-         extensionModelLoaderRepository, troubleshootingService);
+         extensionModelLoaderRepository, troubleshootingService, integrationOrchestratorAPI);
+  }
+
+  public static HttpService findHttpService(ServiceRepository serviceManager) {
+    final List<Service> services = serviceManager.getServices();
+    return (HttpService) services.stream().filter(s -> s instanceof HttpService).findFirst().get();
   }
 
   /**
@@ -175,7 +194,8 @@ public class DefaultMuleContainer implements MuleContainer {
   public DefaultMuleContainer(String[] args, DeploymentService deploymentService, RepositoryService repositoryService,
                               ToolingService toolingService, MuleCoreExtensionManagerServer coreExtensionManager,
                               ServiceManager serviceManager, ExtensionModelLoaderRepository extensionModelLoaderRepository,
-                              TroubleshootingService troubleshootingService)
+                              TroubleshootingService troubleshootingService,
+                              IntegrationOrchestratorAPI integrationOrchestratorAPI)
       throws IllegalArgumentException, InitialisationException {
     // TODO(pablo.kraan): remove the args argument and use the already existing setters to set everything needed
     init(args);
@@ -187,6 +207,7 @@ public class DefaultMuleContainer implements MuleContainer {
     this.extensionModelLoaderRepository = extensionModelLoaderRepository;
     this.toolingService = toolingService;
     this.troubleshootingService = troubleshootingService;
+    this.integrationOrchestratorAPI = integrationOrchestratorAPI;
   }
 
   protected void init(String[] args) throws IllegalArgumentException, InitialisationException {
@@ -197,6 +218,14 @@ public class DefaultMuleContainer implements MuleContainer {
     // properties
     MuleUrlStreamHandlerFactory.installUrlStreamHandlerFactory();
     MuleArtifactUrlStreamHandler.register();
+
+    voltronMode = commandlineOptions.get("voltronMode") != null;
+
+    // Startup properties
+    String propertiesFile = (String) commandlineOptions.get("props");
+    if (propertiesFile != null) {
+      setStartupPropertiesFile(propertiesFile);
+    }
 
     String appOption = (String) commandlineOptions.get(APP_COMMAND_LINE_OPTION);
     if (appOption != null) {
@@ -284,6 +313,10 @@ public class DefaultMuleContainer implements MuleContainer {
 
       startIfNeeded(extensionModelLoaderRepository);
       deploymentService.start();
+
+      if (voltronMode) {
+        integrationOrchestratorAPI.start();
+      }
     } catch (MuleException e) {
       shutdown(e);
       throw e;
@@ -384,6 +417,9 @@ public class DefaultMuleContainer implements MuleContainer {
 
     if (log4jContextFactory != null && log4jContextFactory != defaultLogManagerFactory) {
       log4jContextFactory.dispose();
+    }
+    if (integrationOrchestratorAPI != null) {
+      integrationOrchestratorAPI.stop();
     }
   }
 
