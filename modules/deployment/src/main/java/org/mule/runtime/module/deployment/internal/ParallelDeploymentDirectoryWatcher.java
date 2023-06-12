@@ -12,6 +12,7 @@ import org.mule.runtime.api.scheduler.Scheduler;
 import org.mule.runtime.api.scheduler.SchedulerService;
 import org.mule.runtime.deployment.model.api.application.Application;
 import org.mule.runtime.deployment.model.api.domain.Domain;
+import org.mule.runtime.module.artifact.api.Artifact;
 import org.mule.runtime.module.artifact.api.descriptor.ApplicationDescriptor;
 import org.mule.runtime.module.artifact.api.descriptor.DomainDescriptor;
 import org.mule.runtime.module.deployment.internal.util.ObservableList;
@@ -22,6 +23,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 /**
@@ -39,9 +41,10 @@ public class ParallelDeploymentDirectoryWatcher extends DeploymentDirectoryWatch
                                             ArchiveDeployer<DomainDescriptor, Domain> domainArchiveDeployer,
                                             ArchiveDeployer<ApplicationDescriptor, Application> applicationArchiveDeployer,
                                             ObservableList<Domain> domains, ObservableList<Application> applications,
-                                            Supplier<SchedulerService> schedulerServiceSupplier, ReentrantLock deploymentLock) {
+                                            Supplier<SchedulerService> schedulerServiceSupplier, ReentrantLock deploymentLock,
+                                            BiFunction<String, ObservableList<? extends Artifact>, ? extends Artifact> artifactFinder) {
     super(domainBundleDeployer, domainArchiveDeployer, applicationArchiveDeployer, domains, applications,
-          schedulerServiceSupplier, deploymentLock);
+          schedulerServiceSupplier, deploymentLock, artifactFinder);
   }
 
   @Override
