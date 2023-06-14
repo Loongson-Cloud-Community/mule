@@ -307,6 +307,8 @@ public class MuleArtifactResourcesRegistry extends SimpleRegistry {
         new ApplicationDescriptorFactory(artifactPluginDescriptorLoader, descriptorLoaderRepository,
                                          artifactDescriptorValidatorBuilder);
 
+
+
     integrationFactory = new DefaultVoltronFactory(applicationClassLoaderBuilderFactory,
                                                    domainManager, serviceManager,
                                                    extensionModelLoaderRepository,
