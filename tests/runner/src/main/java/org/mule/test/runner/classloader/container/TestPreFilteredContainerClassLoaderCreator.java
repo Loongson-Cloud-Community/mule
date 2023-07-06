@@ -5,6 +5,7 @@ package org.mule.test.runner.classloader.container;
 
 import static org.mule.runtime.container.internal.ContainerClassLoaderCreatorUtils.getLookupPolicy;
 import static org.mule.runtime.core.api.util.ClassUtils.withContextClassLoader;
+import static org.mule.runtime.jpms.api.JpmsUtils.createModuleLayerClassLoader;
 
 import static java.util.Collections.emptyMap;
 
@@ -15,6 +16,7 @@ import org.mule.runtime.container.internal.MuleClassLoaderLookupPolicy;
 import org.mule.runtime.container.internal.PreFilteredContainerClassLoaderCreator;
 import org.mule.runtime.module.artifact.api.classloader.ArtifactClassLoader;
 import org.mule.runtime.module.artifact.api.classloader.ClassLoaderLookupPolicy;
+import org.mule.runtime.module.artifact.api.classloader.FineGrainedControlClassLoader;
 import org.mule.runtime.module.artifact.api.classloader.MuleArtifactClassLoader;
 import org.mule.runtime.module.artifact.api.descriptor.ArtifactDescriptor;
 
@@ -64,11 +66,18 @@ public class TestPreFilteredContainerClassLoaderCreator implements PreFilteredCo
   @Override
   public ArtifactClassLoader getPreFilteredContainerClassLoader(ArtifactDescriptor artifactDescriptor,
                                                                 ClassLoader parentClassLoader) {
-    ClassLoader containerOptClassLoader = new URLClassLoader(optUrls, parentClassLoader);
+    final MuleClassLoaderLookupPolicy containerLookupPolicy =
+        new MuleClassLoaderLookupPolicy(emptyMap(), getBootPackages());
+
     containerClassLoader = new MuleArtifactClassLoader(artifactDescriptor.getName(), artifactDescriptor,
-                                                       muleUrls,
-                                                       containerOptClassLoader,
-                                                       new MuleClassLoaderLookupPolicy(emptyMap(), getBootPackages()));
+                                                       new URL[0],
+                                                       createModuleLayerClassLoader(optUrls, muleUrls,
+                                                                                    (urls,
+                                                                                     parent) -> new FineGrainedControlClassLoader(urls,
+                                                                                                                                  parent,
+                                                                                                                                  containerLookupPolicy),
+                                                                                    parentClassLoader),
+                                                       containerLookupPolicy);
     return containerClassLoader;
   }
 

@@ -3,14 +3,13 @@
  */
 package org.mule.runtime.module.service.api.artifact;
 
+import static org.mule.runtime.jpms.api.JpmsUtils.createModuleLayer;
 import static org.mule.runtime.jpms.api.JpmsUtils.openToModule;
 
-import static java.lang.ModuleLayer.boot;
-import static java.lang.ModuleLayer.defineModulesWithOneLoader;
-import static java.lang.module.ModuleFinder.ofSystem;
-import static java.nio.file.Paths.get;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 
 import org.mule.runtime.container.api.MuleContainerClassLoaderWrapper;
 import org.mule.runtime.module.artifact.api.classloader.ArtifactClassLoader;
@@ -18,24 +17,21 @@ import org.mule.runtime.module.artifact.api.classloader.ClassLoaderLookupPolicy;
 import org.mule.runtime.module.artifact.api.classloader.MuleArtifactClassLoader;
 import org.mule.runtime.module.artifact.api.descriptor.ArtifactDescriptor;
 
-import java.lang.ModuleLayer.Controller;
-import java.lang.module.Configuration;
-import java.lang.module.ModuleDescriptor;
-import java.lang.module.ModuleFinder;
-import java.lang.module.ModuleReference;
-import java.net.URI;
 import java.net.URL;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Stream;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Creates {@link ArtifactClassLoader} for service descriptors.
  */
 class ServiceModuleLayerFactory extends ServiceClassLoaderFactory {
 
-  private static final String SERVICE_MODULE_NAME_PREFIX = "org.mule.service.";
+  private static final Set<String> SERVICE_MODULE_NAME_PREFIXES =
+      new HashSet<>(asList("org.mule.service.", "com.mulesoft.mule.service."));
   private static final String SCHEDULER_SERVICE_MODULE_NAME = "org.mule.service.scheduler";
+
+  private Optional<ModuleLayer> parentLayer = ofNullable(ServiceModuleLayerFactory.class.getModule().getLayer());
 
   private static final class MuleServiceClassLoader extends MuleArtifactClassLoader {
 
@@ -60,39 +56,21 @@ class ServiceModuleLayerFactory extends ServiceClassLoaderFactory {
                                          lookupPolicy);
     }
 
-    Path[] paths = Stream.of(descriptor.getClassLoaderConfiguration().getUrls())
-        .map(url -> get(URI.create(url.toString())))
-        .toArray(size -> new Path[size]);
+    System.out.println(" >> Creating ModuleLayer for service: '" + artifactId + "'...");
+    ModuleLayer artifactLayer = createModuleLayer(descriptor.getClassLoaderConfiguration().getUrls(), parent,
+                                                  parentLayer, true, true);
 
-    ModuleFinder serviceModulesFinder = ModuleFinder.of(paths);
-    List<String> modules = serviceModulesFinder
-        .findAll()
+    String serviceModuleName = artifactLayer.modules()
         .stream()
-        .map(ModuleReference::descriptor)
-        .map(ModuleDescriptor::name)
-        .collect(toList());
-    String serviceModuleName = modules
-        .stream()
-        .filter(moduleName -> moduleName.startsWith(SERVICE_MODULE_NAME_PREFIX))
+        .filter(module -> SERVICE_MODULE_NAME_PREFIXES.stream().anyMatch(module.getName()::startsWith))
         .findAny()
         // TODO TD-0144818 TD-0144819 TD-0144821 TD-0144822 TD-0144823 temporarily until all services are properly modularized,
         // This should fail if services do not have the proper module name
-        .orElse(modules.get(0));
-
-    ModuleLayer containerLayer = this.getClass().getModule().getLayer();
-    // TODO W-13151134 remove once the container is in its own layer
-    if (containerLayer == null) {
-      containerLayer = boot();
-    }
-
-    Configuration configuration = containerLayer.configuration()
-        .resolve(serviceModulesFinder, ofSystem(), modules);
-    Controller defineModulesWithOneLoader = defineModulesWithOneLoader(configuration,
-                                                                       singletonList(containerLayer),
-                                                                       parent);
+        .orElse(artifactLayer.modules().iterator().next())
+        .getName();
 
     if (serviceModuleName.equals(SCHEDULER_SERVICE_MODULE_NAME)) {
-      openToModule(defineModulesWithOneLoader.layer(),
+      openToModule(artifactLayer,
                    serviceModuleName,
                    "java.base",
                    singletonList("java.lang"));
@@ -101,7 +79,7 @@ class ServiceModuleLayerFactory extends ServiceClassLoaderFactory {
     return new MuleServiceClassLoader(artifactId,
                                       descriptor,
                                       new URL[0],
-                                      defineModulesWithOneLoader.layer().findLoader(serviceModuleName),
+                                      artifactLayer.findLoader(serviceModuleName),
                                       lookupPolicy);
   }
 
@@ -115,4 +93,10 @@ class ServiceModuleLayerFactory extends ServiceClassLoaderFactory {
                   containerClassLoader.getContainerClassLoader().getClassLoader(),
                   containerClassLoader.getContainerClassLoaderLookupPolicy());
   }
+
+  @Override
+  public void setParentLayerFrom(Class clazz) {
+    parentLayer = of(clazz.getModule().getLayer());
+  }
+
 }
