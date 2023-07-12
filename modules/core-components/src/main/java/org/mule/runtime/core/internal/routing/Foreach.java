@@ -30,6 +30,7 @@ import org.mule.runtime.core.api.processor.AbstractMessageProcessorOwner;
 import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
 import org.mule.runtime.core.api.streaming.StreamingManager;
+import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.internal.routing.split.ExpressionSplittingStrategy;
 import org.mule.runtime.core.internal.routing.outbound.EventBuilderConfigurerIterator;
 import org.mule.runtime.core.internal.routing.outbound.EventBuilderConfigurerList;
@@ -125,7 +126,8 @@ public class Foreach extends AbstractMessageProcessorOwner implements Initialisa
     Optional<ProcessingStrategy> processingStrategy = getProcessingStrategy(locator, this);
     nestedChain =
         buildNewChainWithListOfProcessors(processingStrategy, messageProcessors,
-                                          initialSpanInfoProvider.getInitialSpanInfo(this, ITERATION_SPAN_NAME_SUFFIX));
+                                          new ProcessorComponentSpanInfo(initialSpanInfoProvider, this,
+                                                                         ITERATION_SPAN_NAME_SUFFIX));
     splittingStrategy = new ExpressionSplittingStrategy(expressionManager, expression);
     super.initialise();
   }

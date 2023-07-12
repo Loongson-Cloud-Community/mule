@@ -7,10 +7,11 @@
 package org.mule.runtime.core.privileged.processor.chain;
 
 
+import org.mule.runtime.api.profiling.tracing.Span;
 import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
 import org.mule.runtime.core.privileged.processor.MessageProcessorBuilder;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
+import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
 
 /**
  * Builds {@link MessageProcessorChain} instances.
@@ -54,12 +55,11 @@ public interface MessageProcessorChainBuilder extends MessageProcessorBuilder {
   MessageProcessorChain build();
 
   /**
-   * @param chainInitialSpanInfo the span customization info for the creation of the
-   *                             {@link org.mule.runtime.api.profiling.tracing.Span} associated to the chain.
+   * @param chainComponentSpanInfo the span customization info for the creation of the {@link Span} associated to the chain.
    *
    * @since 4.5.0
    */
-  default void setChainInitialSpanInfo(InitialSpanInfo chainInitialSpanInfo) {
+  default void setChainComponentSpanInfo(ComponentSpanInfo chainComponentSpanInfo) {
     // Nothing to do by default.
   }
 }

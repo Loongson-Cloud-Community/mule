@@ -13,7 +13,7 @@ import org.mule.runtime.tracer.api.EventTracer;
 import org.mule.runtime.tracer.api.context.getter.DistributedTraceContextGetter;
 import org.mule.runtime.tracer.api.sniffer.SpanSnifferManager;
 import org.mule.runtime.tracer.api.span.InternalSpan;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
+import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
 import org.mule.runtime.tracer.api.span.validation.Assertion;
 
 import java.util.Map;
@@ -52,13 +52,13 @@ public class SelectableCoreEventTracer implements EventTracer<CoreEvent> {
   }
 
   @Override
-  public Optional<InternalSpan> startComponentSpan(CoreEvent event, InitialSpanInfo spanInfo) {
-    return currentEventTracer.startComponentSpan(event, spanInfo);
+  public Optional<InternalSpan> startComponentSpan(CoreEvent event, ComponentSpanInfo componentSpanInfo) {
+    return currentEventTracer.startComponentSpan(event, componentSpanInfo);
   }
 
   @Override
-  public Optional<InternalSpan> startComponentSpan(CoreEvent event, InitialSpanInfo spanInfo, Assertion assertion) {
-    return currentEventTracer.startComponentSpan(event, spanInfo, assertion);
+  public Optional<InternalSpan> startComponentSpan(CoreEvent event, ComponentSpanInfo componentSpanInfo, Assertion assertion) {
+    return currentEventTracer.startComponentSpan(event, componentSpanInfo, assertion);
   }
 
   @Override

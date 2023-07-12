@@ -38,7 +38,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.mule.runtime.core.privileged.profiling.tracing.InitialSpanInfoAware;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
+import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,8 +119,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
                                                     Optional<ProcessingStrategy> processingStrategyOptional) {
     if (tempList.size() == 1 && tempList.get(0) instanceof DefaultMessageProcessorChain) {
       DefaultMessageProcessorChain messageProcessorChain = (DefaultMessageProcessorChain) tempList.get(0);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
+      if (chainComponentSpanInfo != null) {
+        messageProcessorChain.setComponentSpanInfo(chainComponentSpanInfo);
       }
       return messageProcessorChain;
     } else {
@@ -129,8 +130,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
                                            new ArrayList<>(tempList),
                                            messagingExceptionHandler,
                                            location);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
+      if (chainComponentSpanInfo != null) {
+        messageProcessorChain.setComponentSpanInfo(chainComponentSpanInfo);
       }
       return messageProcessorChain;
     }
@@ -140,8 +141,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
                                                              Optional<ProcessingStrategy> processingStrategyOptional) {
     if (tempList.size() == 1 && tempList.get(0) instanceof DefaultMessageProcessorChain) {
       DefaultMessageProcessorChain messageProcessorChain = (DefaultMessageProcessorChain) tempList.get(0);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
+      if (chainComponentSpanInfo != null) {
+        messageProcessorChain.setComponentSpanInfo(chainComponentSpanInfo);
       }
       return messageProcessorChain;
     } else {
@@ -151,8 +152,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
                                            new ArrayList<>(tempList),
                                            NullExceptionHandler.getInstance(),
                                            location);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
+      if (chainComponentSpanInfo != null) {
+        messageProcessorChain.setComponentSpanInfo(chainComponentSpanInfo);
       }
       return messageProcessorChain;
     }
@@ -165,8 +166,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
                                               ofNullable(processingStrategy), head,
                                               processors, processorsForLifecycle, NullExceptionHandler.getInstance(),
                                               location);
-    if (chainInitialSpanInfo != null) {
-      messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
+    if (chainComponentSpanInfo != null) {
+      messageProcessorChain.setComponentSpanInfo(chainComponentSpanInfo);
     }
     return messageProcessorChain;
   }
@@ -205,8 +206,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
   }
 
   @Override
-  public void setInitialSpanInfo(InitialSpanInfo initialSpanInfo) {
-    this.chainInitialSpanInfo = initialSpanInfo;
+  public void setComponentSpanInfo(ComponentSpanInfo componentSpanInfo) {
+    this.chainComponentSpanInfo = componentSpanInfo;
   }
 
   @NoExtend
@@ -319,7 +320,7 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
     private final Supplier<ProcessingStrategy> processingStrategySupplier;
     private FlowExceptionHandler messagingExceptionHandler;
     private MessageProcessorChain delegate;
-    private InitialSpanInfo chainInitialSpanInfo;
+    private ComponentSpanInfo chainComponentSpan;
 
     private LazyProcessorChainBuilder(String name, Optional<ProcessingStrategy> processingStrategyOptional,
                                       List<Processor> processors,
@@ -334,7 +335,7 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
     public void initialise() throws InitialisationException {
       chainBuilder.setProcessingStrategy(processingStrategySupplier.get());
       chainBuilder.setMessagingExceptionHandler(messagingExceptionHandler);
-      chainBuilder.setChainInitialSpanInfo(chainInitialSpanInfo);
+      chainBuilder.setChainComponentSpanInfo(chainComponentSpan);
       delegate = chainBuilder.build();
       delegate.setAnnotations(getAnnotations());
       initialiseIfNeeded(delegate, muleContext);
@@ -372,8 +373,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
     }
 
     @Override
-    public void setInitialSpanInfo(InitialSpanInfo chainInitialSpanInfo) {
-      this.chainInitialSpanInfo = chainInitialSpanInfo;
+    public void setComponentSpanInfo(ComponentSpanInfo componentSpanInfo) {
+      this.chainComponentSpan = componentSpanInfo;
     }
   }
 

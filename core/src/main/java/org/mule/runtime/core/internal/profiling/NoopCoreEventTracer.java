@@ -14,7 +14,7 @@ import org.mule.runtime.tracer.api.EventTracer;
 import org.mule.runtime.tracer.api.context.getter.DistributedTraceContextGetter;
 import org.mule.runtime.tracer.api.sniffer.SpanSnifferManager;
 import org.mule.runtime.tracer.api.span.InternalSpan;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
+import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
 import org.mule.runtime.tracer.api.span.validation.Assertion;
 
 import java.util.Map;
@@ -37,12 +37,12 @@ public class NoopCoreEventTracer implements EventTracer<CoreEvent> {
   private NoopCoreEventTracer() {}
 
   @Override
-  public Optional<InternalSpan> startComponentSpan(CoreEvent event, InitialSpanInfo initialSpanInfo) {
+  public Optional<InternalSpan> startComponentSpan(CoreEvent event, ComponentSpanInfo componentSpanInfo) {
     return empty();
   }
 
   @Override
-  public Optional<InternalSpan> startComponentSpan(CoreEvent event, InitialSpanInfo initialSpanInfo, Assertion assertion) {
+  public Optional<InternalSpan> startComponentSpan(CoreEvent event, ComponentSpanInfo componentSpanInfo, Assertion assertion) {
     return empty();
   }
 
