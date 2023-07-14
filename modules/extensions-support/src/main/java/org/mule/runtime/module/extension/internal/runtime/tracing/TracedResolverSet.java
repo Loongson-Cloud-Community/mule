@@ -14,7 +14,7 @@ import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolvingContext;
 import org.mule.runtime.tracer.api.EventTracer;
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 
 import java.util.Map;
 
@@ -26,19 +26,19 @@ import java.util.Map;
 public class TracedResolverSet extends ResolverSet {
 
   private final EventTracer<CoreEvent> coreEventEventTracer;
-  private final ComponentSpanInfo valueResolutionComponentSpanInfo;
+  private final InitialSpanInfo valueResolutionInitialSpanInfo;
 
   public TracedResolverSet(MuleContext muleContext, EventTracer<CoreEvent> coreEventEventTracer,
-                           ComponentSpanInfo valueResolutionComponentSpanInfo) {
+                           InitialSpanInfo valueResolutionInitialSpanInfo) {
     super(muleContext);
     this.coreEventEventTracer = coreEventEventTracer;
-    this.valueResolutionComponentSpanInfo = valueResolutionComponentSpanInfo;
+    this.valueResolutionInitialSpanInfo = valueResolutionInitialSpanInfo;
   }
 
   @Override
   protected Object resolve(Map.Entry<String, ValueResolver<?>> entry, ValueResolvingContext valueResolvingContext)
       throws MuleException {
-    coreEventEventTracer.startComponentSpan(valueResolvingContext.getEvent(), valueResolutionComponentSpanInfo);
+    coreEventEventTracer.startComponentSpan(valueResolvingContext.getEvent(), valueResolutionInitialSpanInfo);
     try {
       coreEventEventTracer.addCurrentSpanAttribute(valueResolvingContext.getEvent(), "value-name", entry.getKey());
       return super.resolve(entry, valueResolvingContext);

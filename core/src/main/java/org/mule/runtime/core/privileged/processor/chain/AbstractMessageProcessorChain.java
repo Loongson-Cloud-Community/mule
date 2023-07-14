@@ -74,7 +74,6 @@ import org.mule.runtime.core.api.processor.ReactiveProcessor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
 import org.mule.runtime.core.api.streaming.StreamingManager;
 
-import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.internal.profiling.tracing.event.span.condition.SpanNameAssertion;
 import org.mule.runtime.core.privileged.component.AbstractExecutableComponent;
 import org.mule.runtime.core.privileged.event.BaseEventContext;
@@ -112,7 +111,7 @@ import java.util.function.Supplier;
 import javax.inject.Inject;
 
 import org.mule.runtime.tracer.api.EventTracer;
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 import org.mule.runtime.tracer.api.span.validation.Assertion;
 import org.mule.runtime.tracer.customization.api.InitialSpanInfoProvider;
 import org.reactivestreams.Publisher;
@@ -197,7 +196,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
   private Scheduler switchOnErrorScheduler;
   private EventTracer<CoreEvent> muleEventTracer;
 
-  private ComponentSpanInfo chainComponentSpanInfo;
+  private InitialSpanInfo chainInitialSpanInfo;
 
   // This is used to verify if a span has to be ended in case of error handling.
   // In case an exception is raised before the chain begins to execute, there is no current span set for the chain.
@@ -239,7 +238,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
                         // We end the current span verifying that it's a MessageProcessorChain Span.
                         muleEventTracer
                             .endCurrentSpan(handled,
-                                            new SpanNameAssertion(chainComponentSpanInfo.getName()));
+                                            new SpanNameAssertion(chainInitialSpanInfo.getName()));
                       }
                       errorSwitchSinkSinkRef.next(right(handled));
                     },
@@ -254,7 +253,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
                         // We end the current Span verifying that it's a MessageProcessorChain span.
                         muleEventTracer
                             .endCurrentSpan(coreEvent,
-                                            new SpanNameAssertion(chainComponentSpanInfo.getName()));
+                                            new SpanNameAssertion(chainInitialSpanInfo.getName()));
                       }
                       errorSwitchSinkSinkRef.next(left((MessagingException) rethrown, CoreEvent.class));
                     }), recreateRouter(ctx));
@@ -306,7 +305,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
         // Record the error and end current (MessageProcessor chain) Span. We verify that is the chain span.
         muleEventTracer.recordErrorAtCurrentSpan(coreEvent, true);
         muleEventTracer.endCurrentSpan(coreEvent,
-                                       new SpanNameAssertion(chainComponentSpanInfo.getName()));
+                                       new SpanNameAssertion(chainInitialSpanInfo.getName()));
 
         context.error(throwable);
       });
@@ -367,7 +366,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
     // We create a span for the execution of the chain. As reactor only receives an event per next. No need to synchronize.
     // We don't have a way to verify nothing about the parent span. So no tracing condition is added.
     stream = stream
-        .doOnNext(event -> muleEventTracer.startComponentSpan(event, chainComponentSpanInfo)
+        .doOnNext(event -> muleEventTracer.startComponentSpan(event, chainInitialSpanInfo)
             .ifPresent(span -> chainSpanCreated = true));
     for (Processor processor : getProcessorsToExecute()) {
       // Perform assembly for processor chain by transforming the existing publisher with a publisher function for each processor
@@ -383,7 +382,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
     }
     // We end the MessageProcessorChain span verifying that it is the one expected by its name.
     stream = stream.doOnNext(event -> muleEventTracer
-        .endCurrentSpan(event, new SpanNameAssertion(chainComponentSpanInfo.getName())));
+        .endCurrentSpan(event, new SpanNameAssertion(chainInitialSpanInfo.getName())));
 
     stream = stream.subscriberContext(ctx -> {
       ClassLoader tccl = currentThread().getContextClassLoader();
@@ -498,13 +497,13 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
     interceptors.add((processor, next) -> {
       String processorPath = getProcessorPath((Processor) processor);
 
-      Assertion assertion = new SpanNameAssertion(chainComponentSpanInfo.getName());
+      Assertion assertion = new SpanNameAssertion(chainInitialSpanInfo.getName());
 
-      final ComponentSpanInfo componentSpanInfo = getComponentSpan(processor);
+      final InitialSpanInfo processorInitialSpanInfo = getProcessorInitialSpanInfo(processor);
 
       return stream -> from(stream)
-          .doOnNext(event -> beforeComponentProcessingStrategy((Processor) processor, processorPath, componentSpanInfo, assertion,
-                                                               event))
+          .doOnNext(event -> beforeComponentProcessingStrategy((Processor) processor, processorPath, processorInitialSpanInfo,
+                                                               assertion, event))
           .transform(next)
           .map(result -> afterComponentProcessingStrategy((Processor) processor, processorPath, result));
     });
@@ -512,18 +511,19 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
     return interceptors;
   }
 
-  private ComponentSpanInfo getComponentSpan(ReactiveProcessor processor) {
-    ComponentSpanInfo component;
+  private InitialSpanInfo getProcessorInitialSpanInfo(ReactiveProcessor processor) {
+    InitialSpanInfo initialSpanInfo = null;
 
     if (processor instanceof Component) {
       // If this is a component we create the span with the corresponding name.
-      component = new ProcessorComponentSpanInfo(initialSpanInfoProvider, (Component) processor);
+      initialSpanInfo = initialSpanInfoProvider.getInitialSpanInfo((Component) processor);
     } else {
       // Other processors are not exported
-      component = new ProcessorComponentSpanInfo(initialSpanInfoProvider, UNKNOWN_COMPONENT, UNKNOWN, "");
+      initialSpanInfo =
+          initialSpanInfoProvider.getInitialSpanInfo(UNKNOWN_COMPONENT, UNKNOWN, "");
     }
 
-    return component;
+    return initialSpanInfo;
   }
 
   private void beforeProcessorInSameThread(CoreEvent event, Processor processor) {
@@ -550,12 +550,14 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
     }
   }
 
-  private void beforeComponentProcessingStrategy(Processor processor, String processorPath, ComponentSpanInfo componentSpanInfo,
+  private void beforeComponentProcessingStrategy(Processor processor, String processorPath, InitialSpanInfo initialSpanInfo,
                                                  Assertion assertion, CoreEvent event) {
     // The span corresponding to the processor has to be created here because if the processor
     // cannot process a message (by the canProcessMessage condition below), the exception will be considered
     // part of the execution of the processor.
-    muleEventTracer.startComponentSpan(event, componentSpanInfo, assertion);
+    muleEventTracer.startComponentSpan(event,
+                                       initialSpanInfo,
+                                       assertion);
 
     if (!canProcessMessage) {
       throw propagate(new MessagingException(event, new LifecycleException(isStopped(name), event.getMessage())));
@@ -764,8 +766,8 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
 
     muleEventTracer = profilingService.getCoreEventTracer();
 
-    if (chainComponentSpanInfo == null) {
-      this.chainComponentSpanInfo = new ProcessorComponentSpanInfo(initialSpanInfoProvider, this);
+    if (chainInitialSpanInfo == null) {
+      this.chainInitialSpanInfo = initialSpanInfoProvider.getInitialSpanInfo(this);
     }
   }
 
@@ -808,7 +810,7 @@ abstract class AbstractMessageProcessorChain extends AbstractExecutableComponent
     return messagingExceptionHandler;
   }
 
-  public void setComponentSpanInfo(ComponentSpanInfo componentSpanInfo) {
-    this.chainComponentSpanInfo = componentSpanInfo;
+  public void setInitialSpanInfo(InitialSpanInfo chainInitialSpanInfo) {
+    this.chainInitialSpanInfo = chainInitialSpanInfo;
   }
 }

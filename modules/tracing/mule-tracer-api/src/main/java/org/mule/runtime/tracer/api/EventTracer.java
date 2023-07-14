@@ -7,6 +7,7 @@
 package org.mule.runtime.tracer.api;
 
 import static java.util.Collections.emptyMap;
+import static java.util.Optional.empty;
 
 import org.mule.runtime.api.component.Component;
 import org.mule.runtime.api.event.Event;
@@ -15,7 +16,7 @@ import org.mule.runtime.api.message.Error;
 import org.mule.runtime.tracer.api.sniffer.SpanSnifferManager;
 import org.mule.runtime.tracer.api.context.getter.DistributedTraceContextGetter;
 import org.mule.runtime.tracer.api.span.InternalSpan;
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 import org.mule.runtime.tracer.api.span.validation.Assertion;
 
 import java.util.Map;
@@ -43,29 +44,32 @@ import java.util.function.Supplier;
  */
 public interface EventTracer<T extends Event> {
 
-  /**
-   * Starts a span associated to the {@param component} as the current context span for the {@link Event}.
-   *
-   * @param event             the {@link Event} that has hit the {@link Component}
-   * @param componentSpanInfo the {@link ComponentSpanInfo} used for customizing the span.
-   * @return the span generated for the context of the {@link Event} when it hits the {@param component} if it could be created.
-   */
-  Optional<InternalSpan> startComponentSpan(T event, ComponentSpanInfo componentSpanInfo);
-
-  /**
-   * Starts a span associated to the {@param component} as the current context span for the {@link Event}.
-   *
-   * @param event             the {@link Event} that has hit the {@link Component}
-   * @param componentSpanInfo the {@link ComponentSpanInfo} used for customizing the span.
-   * @param assertion         indicates a condition that has to be verified for starting the span.
-   *
-   * @return the span generated for the context of the {@link Event} when it hits the {@param component} if it could be created.
-   */
-  Optional<InternalSpan> startComponentSpan(T event, ComponentSpanInfo componentSpanInfo, Assertion assertion);
-
   // TODO: W-13057253: Refactor in order to provide Component related sugars.
   // TODO: Internal span should not be returned by this interface. Return Span instead. Improve static factories for getting the
   // internal span if necessary.
+  /**
+   * Starts a span associated to the {@param component} as the current context span for the {@link Event}.
+   *
+   * @param event    the {@link Event} that has hit the {@link Component}
+   * @param spanInfo the {@link InitialSpanInfo} used for customizing the span.
+   * @return the span generated for the context of the {@link Event} when it hits the {@param component} if it could be created.
+   */
+  Optional<InternalSpan> startComponentSpan(T event,
+                                            InitialSpanInfo spanInfo);
+
+
+  /**
+   * Starts a span associated to the {@param component} as the current context span for the {@link Event}.
+   *
+   * @param event     the {@link Event} that has hit the {@link Component}
+   * @param spanInfo  the {@link InitialSpanInfo} used for customizing the span.
+   * @param assertion indicates a condition that has to be verified for starting the span.
+   *
+   * @return the span generated for the context of the {@link Event} when it hits the {@param component} if it could be created.
+   */
+  Optional<InternalSpan> startComponentSpan(T event,
+                                            InitialSpanInfo spanInfo,
+                                            Assertion assertion);
 
   /**
    * @param event ends the current context {@link InternalSpan}.

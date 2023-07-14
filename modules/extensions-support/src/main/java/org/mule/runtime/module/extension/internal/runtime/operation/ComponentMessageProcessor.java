@@ -97,7 +97,6 @@ import org.mule.runtime.core.internal.policy.OperationPolicy;
 import org.mule.runtime.core.internal.policy.PolicyManager;
 import org.mule.runtime.core.internal.interception.ParametersResolverProcessor;
 import org.mule.runtime.core.internal.processor.strategy.ComponentInnerProcessor;
-import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.internal.rx.FluxSinkRecorder;
 import org.mule.runtime.core.internal.util.rx.FluxSinkSupplier;
 import org.mule.runtime.core.internal.util.rx.RxUtils;
@@ -610,9 +609,9 @@ public abstract class ComponentMessageProcessor<T extends ComponentModel> extend
       // Since the tracing feature is Component aware at all levels, we cannot do this wrapping earlier (for example, at component
       // building time)
       resolverSet = new TracedResolverSet(muleContext, coreEventEventTracer,
-                                          new ProcessorComponentSpanInfo(initialSpanInfoProvider, this,
-                                                                         VALUE_RESOLUTION_SPAN_NAME, ""))
-                                                                             .addAll(resolverSet.getResolvers());
+                                          initialSpanInfoProvider
+                                              .getInitialSpanInfo(this, VALUE_RESOLUTION_SPAN_NAME, ""))
+                                                  .addAll(resolverSet.getResolvers());
 
       initialised = true;
     }
@@ -1072,8 +1071,8 @@ public abstract class ComponentMessageProcessor<T extends ComponentModel> extend
                                         resultTransformer,
                                         profilingService.getProfilingDataProducer(OPERATION_THREAD_RELEASE),
                                         coreEventEventTracer,
-                                        new ProcessorComponentSpanInfo(initialSpanInfoProvider, this,
-                                                                       OPERATION_EXECUTION_SPAN_NAME, ""),
+                                        initialSpanInfoProvider
+                                            .getInitialSpanInfo(this, OPERATION_EXECUTION_SPAN_NAME, ""),
                                         featureFlaggingService.isEnabled(SUPPRESS_ERRORS));
   }
 
@@ -1142,7 +1141,7 @@ public abstract class ComponentMessageProcessor<T extends ComponentModel> extend
       throws MuleException {
     coreEventEventTracer
         .startComponentSpan(event,
-                            new ProcessorComponentSpanInfo(initialSpanInfoProvider, this, PARAMETERS_RESOLUTION_SPAN_NAME, ""));
+                            initialSpanInfoProvider.getInitialSpanInfo(this, PARAMETERS_RESOLUTION_SPAN_NAME, ""));
     try (ValueResolvingContext context = ValueResolvingContext.builder(event, expressionManager)
         .withConfig(configuration)
         .withLocation(getLocation()).build()) {

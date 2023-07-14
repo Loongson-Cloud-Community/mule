@@ -23,6 +23,7 @@ import static java.lang.Boolean.getBoolean;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
+
 import org.mule.runtime.api.config.FeatureFlaggingService;
 import org.mule.runtime.api.event.EventContext;
 import org.mule.runtime.api.lifecycle.Initialisable;
@@ -32,10 +33,9 @@ import org.mule.runtime.core.api.event.CoreEvent;
 import org.mule.runtime.tracer.api.sniffer.SpanSnifferManager;
 import org.mule.runtime.tracer.api.context.getter.DistributedTraceContextGetter;
 import org.mule.runtime.tracer.api.EventTracer;
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 import org.mule.runtime.tracer.api.span.validation.Assertion;
 import org.mule.runtime.tracer.api.span.InternalSpan;
-import org.mule.runtime.tracer.customization.api.InitialSpanInfoProvider;
 import org.mule.runtime.tracer.impl.span.command.EventContextAddAttributeCommand;
 import org.mule.runtime.tracer.impl.span.command.EventContextAddAttributesCommand;
 import org.mule.runtime.tracer.impl.span.command.EventContextEndSpanCommand;
@@ -81,13 +81,11 @@ public class CoreEventTracer implements EventTracer<CoreEvent>, Initialisable {
   public static final String ERROR_ON_EXECUTING_CORE_EVENT_GET_DISTRIBUTED_CONTEXT_SPAN_COMMAND_MESSAGE =
       "Error on executing core event get distributed context span command";
 
-  public static final String UNKNOWN = "unknown";
-
   @Inject
   private EventSpanFactory eventSpanFactory;
 
   @Inject
-  private FeatureFlaggingService featureFlaggingService;
+  FeatureFlaggingService featureFlaggingService;
 
   private EventContextStartSpanCommand startCommand;
 
@@ -107,14 +105,14 @@ public class CoreEventTracer implements EventTracer<CoreEvent>, Initialisable {
 
 
   @Override
-  public Optional<InternalSpan> startComponentSpan(CoreEvent event, ComponentSpanInfo componentSpanInfo) {
-    return startComponentSpan(event, componentSpanInfo, SUCCESSFUL_ASSERTION);
+  public Optional<InternalSpan> startComponentSpan(CoreEvent coreEvent, InitialSpanInfo spanCustomizationInfo) {
+    return startComponentSpan(coreEvent, spanCustomizationInfo, SUCCESSFUL_ASSERTION);
   }
 
   @Override
-  public Optional<InternalSpan> startComponentSpan(CoreEvent event, ComponentSpanInfo componentSpanInfo, Assertion assertion) {
-    return startCommand.execute(event.getContext(), enrichInitialSpanInfo(componentSpanInfo.getInitialSpanInfo(), event),
-                                assertion);
+  public Optional<InternalSpan> startComponentSpan(CoreEvent coreEvent, InitialSpanInfo initialSpanInfo,
+                                                   Assertion assertion) {
+    return startCommand.execute(coreEvent.getContext(), enrichInitialSpanInfo(initialSpanInfo, coreEvent), assertion);
   }
 
   @Override

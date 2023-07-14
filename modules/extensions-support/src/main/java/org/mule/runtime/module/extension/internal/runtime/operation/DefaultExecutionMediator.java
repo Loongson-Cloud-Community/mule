@@ -50,8 +50,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import org.mule.runtime.tracer.api.EventTracer;
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
-
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 import org.slf4j.Logger;
 
 /**
@@ -80,7 +79,7 @@ public final class DefaultExecutionMediator<M extends ComponentModel> implements
   private final ComponentModel operationModel;
   private final ProfilingDataProducer<ComponentThreadingProfilingEventContext, CoreEvent> threadReleaseDataProducer;
   private final EventTracer<CoreEvent> coreEventEventTracer;
-  private final ComponentSpanInfo operationExecutionComponentSpanInfo;
+  private final InitialSpanInfo operationExecutionInitialSpanInfo;
 
   private static final Logger LOGGER = getLogger(DefaultExecutionMediator.class);
 
@@ -92,7 +91,7 @@ public final class DefaultExecutionMediator<M extends ComponentModel> implements
                                   ResultTransformer resultTransformer,
                                   ProfilingDataProducer<ComponentThreadingProfilingEventContext, CoreEvent> threadReleaseDataProducer,
                                   EventTracer<CoreEvent> coreEventEventTracer,
-                                  ComponentSpanInfo operationExecutionComponentSpanInfo,
+                                  InitialSpanInfo operationExecutionInitialSpanInfo,
                                   boolean suppressErrors) {
     this.interceptorChain = interceptorChain;
     this.exceptionEnricherManager = new ExceptionHandlerManager(extensionModel, operationModel, typeRepository);
@@ -113,7 +112,7 @@ public final class DefaultExecutionMediator<M extends ComponentModel> implements
 
     this.threadReleaseDataProducer = threadReleaseDataProducer;
     this.coreEventEventTracer = coreEventEventTracer;
-    this.operationExecutionComponentSpanInfo = operationExecutionComponentSpanInfo;
+    this.operationExecutionInitialSpanInfo = operationExecutionInitialSpanInfo;
   }
 
   /**
@@ -240,7 +239,7 @@ public final class DefaultExecutionMediator<M extends ComponentModel> implements
       final ClassLoader currentClassLoader = currentThread.getContextClassLoader();
       setContextClassLoader(currentThread, currentClassLoader, executionClassLoader);
       try {
-        coreEventEventTracer.startComponentSpan(context.getEvent(), operationExecutionComponentSpanInfo);
+        coreEventEventTracer.startComponentSpan(context.getEvent(), operationExecutionInitialSpanInfo);
         executor.execute(context, new TracedOperationExecutionCallback(context, coreEventEventTracer, callback));
       } finally {
         profileThreadRelease(context);

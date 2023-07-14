@@ -40,7 +40,6 @@ import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.ReactiveProcessor;
 import org.mule.runtime.core.internal.context.notification.DefaultFlowCallStack;
 import org.mule.runtime.core.internal.exception.MessagingException;
-import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.privileged.processor.chain.MessageProcessorChain;
 import org.mule.runtime.tracer.customization.api.InitialSpanInfoProvider;
 
@@ -119,8 +118,7 @@ public class PolicyNextActionMessageProcessor extends AbstractComponent implemen
                 : policyEventMapper.onOperationPolicyNext(event))
             .transform((ReactiveProcessor) ((Reference) ctx.get(POLICY_NEXT_OPERATION)).get()));
       }
-    }), policyNextErrorHandler(), new ProcessorComponentSpanInfo(initialSpanInfoProvider,
-                                                                 this, POLICY_NEXT_ACTION_SPAN_NAME, ""));
+    }), policyNextErrorHandler(), initialSpanInfoProvider.getInitialSpanInfo(this, POLICY_NEXT_ACTION_SPAN_NAME, ""));
     initialiseIfNeeded(nextDispatchAsChain, muleContext);
   }
 

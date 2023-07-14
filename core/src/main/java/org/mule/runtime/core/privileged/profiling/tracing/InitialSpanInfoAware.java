@@ -7,14 +7,14 @@
 
 package org.mule.runtime.core.privileged.profiling.tracing;
 
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 
 /**
- * Interface which allows classes to set {@link ComponentSpanInfo}
+ * Interface which allows classes to set {@link org.mule.runtime.tracer.api.span.info.InitialSpanInfo}
  *
  * @since 4.5.0
  */
 public interface InitialSpanInfoAware {
 
-  void setComponentSpanInfo(ComponentSpanInfo componentSpanInfo);
+  void setInitialSpanInfo(InitialSpanInfo initialSpanInfo);
 }

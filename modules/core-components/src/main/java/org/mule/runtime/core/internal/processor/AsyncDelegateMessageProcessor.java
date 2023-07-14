@@ -63,7 +63,6 @@ import org.mule.runtime.core.internal.construct.FromFlowRejectedExecutionExcepti
 import org.mule.runtime.core.internal.exception.MessagingException;
 import org.mule.runtime.core.internal.message.InternalEvent;
 import org.mule.runtime.core.internal.processor.strategy.DirectProcessingStrategyFactory;
-import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.privileged.event.BaseEventContext;
 import org.mule.runtime.core.privileged.event.DefaultMuleSession;
 import org.mule.runtime.core.privileged.event.PrivilegedEvent;
@@ -158,8 +157,7 @@ public class AsyncDelegateMessageProcessor extends AbstractMessageProcessorOwner
 
     delegateBuilder.setProcessingStrategy(processingStrategy);
     delegateBuilder
-        .setChainComponentSpanInfo(new ProcessorComponentSpanInfo(initialSpanInfoProvider, this, ASYNC_INNER_CHAIN_SPAN_NAME,
-                                                                  ""));
+        .setChainInitialSpanInfo(initialSpanInfoProvider.getInitialSpanInfo(this, ASYNC_INNER_CHAIN_SPAN_NAME, ""));
     delegate = delegateBuilder.build();
 
     initialiseIfNeeded(delegate, getMuleContext());

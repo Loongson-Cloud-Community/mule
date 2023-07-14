@@ -10,15 +10,13 @@ package org.mule.runtime.tracer.api.span.info;
 import static java.util.Collections.emptySet;
 
 import org.mule.runtime.api.event.Event;
-import org.mule.runtime.tracer.api.EventTracer;
-import org.mule.runtime.tracer.api.span.InternalSpan;
 
 import java.util.Set;
 
 /**
- * The export information when starting a {@link InternalSpan}.
+ * The export information when starting a {@link org.mule.runtime.tracer.api.span.InternalSpan}.
  *
- * @see EventTracer#startComponentSpan(Event, ComponentSpanInfo)
+ * @see org.mule.runtime.tracer.api.EventTracer#startComponentSpan(Event, InitialSpanInfo)
  *
  * @since 4.5.0
  */

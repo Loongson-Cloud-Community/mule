@@ -25,11 +25,10 @@ import org.mule.runtime.core.api.context.MuleContextAware;
 import org.mule.runtime.core.api.el.ExpressionManagerSession;
 import org.mule.runtime.core.api.exception.FlowExceptionHandler;
 import org.mule.runtime.core.api.processor.Processor;
-import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.privileged.processor.chain.DefaultMessageProcessorChainBuilder.MessagingExceptionHandlerAware;
 
 import org.mule.runtime.core.privileged.profiling.tracing.InitialSpanInfoAware;
-import org.mule.runtime.tracer.api.span.info.ComponentSpanInfo;
+import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 import org.mule.runtime.tracer.customization.api.InitialSpanInfoProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +44,7 @@ public class ProcessorRoute extends AbstractComponent implements MuleContextAwar
   public static final String PROCESSOR_ROUTE_SPAN_NAME = "route";
 
   private final Processor processor;
-  private ComponentSpanInfo componentSpanInfo;
+  private InitialSpanInfo initialSpanInfo;
 
   // just let the error be propagated to the outer chain...
   private FlowExceptionHandler messagingExceptionHandler = (exception, event) -> null;
@@ -54,7 +53,7 @@ public class ProcessorRoute extends AbstractComponent implements MuleContextAwar
   public ProcessorRoute(Processor processor, InitialSpanInfoProvider initialSpanInfoProvider) {
     requireNonNull(processor, "processor can't be null");
     this.processor = processor;
-    this.componentSpanInfo = new ProcessorComponentSpanInfo(initialSpanInfoProvider, this, PROCESSOR_ROUTE_SPAN_NAME, "");
+    this.initialSpanInfo = initialSpanInfoProvider.getInitialSpanInfo(this, PROCESSOR_ROUTE_SPAN_NAME, "");
   }
 
   public Processor getProcessor() {
@@ -78,8 +77,8 @@ public class ProcessorRoute extends AbstractComponent implements MuleContextAwar
     this.messagingExceptionHandler = messagingExceptionHandler;
   }
 
-  public void setComponentSpanInfo(ComponentSpanInfo componentSpanInfo) {
-    this.componentSpanInfo = componentSpanInfo;
+  public void setInitialSpanInfo(InitialSpanInfo initialSpanInfo) {
+    this.initialSpanInfo = initialSpanInfo;
   }
 
   @Override
@@ -88,7 +87,8 @@ public class ProcessorRoute extends AbstractComponent implements MuleContextAwar
       ((MessagingExceptionHandlerAware) processor).setMessagingExceptionHandler(messagingExceptionHandler);
     }
     if (processor instanceof InitialSpanInfoAware) {
-      ((InitialSpanInfoAware) processor).setComponentSpanInfo(componentSpanInfo);
+      ((InitialSpanInfoAware) processor)
+          .setInitialSpanInfo(initialSpanInfo);
     }
     initialiseIfNeeded(processor, muleContext);
   }

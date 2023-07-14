@@ -25,7 +25,6 @@ import org.mule.runtime.core.api.exception.NullExceptionHandler;
 import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
 
-import org.mule.runtime.core.internal.profiling.tracing.ProcessorComponentSpanInfo;
 import org.mule.runtime.core.privileged.processor.chain.DefaultMessageProcessorChainBuilder;
 import org.mule.runtime.core.privileged.processor.chain.MessageProcessorChain;
 
@@ -116,8 +115,8 @@ public class SubflowMessageProcessorChainBuilder extends DefaultMessageProcessor
       super(name, processingStrategyOptional, processors,
             NullExceptionHandler.getInstance());
       this.subFlowName = name;
-      this.setComponentSpanInfo(new ProcessorComponentSpanInfo(initialSpanInfoProvider, this,
-                                                               SUB_FLOW_MESSAGE_PROCESSOR_SPAN_NAME, ""));
+      this.setInitialSpanInfo(initialSpanInfoProvider
+          .getInitialSpanInfo(this, SUB_FLOW_MESSAGE_PROCESSOR_SPAN_NAME, ""));
     }
 
     private void pushSubFlowFlowStackElement(CoreEvent event) {
