@@ -12,7 +12,7 @@ import org.mule.runtime.core.api.exception.FlowExceptionHandler;
 import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
 import org.mule.runtime.core.privileged.processor.MessageProcessorBuilder;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
+import org.mule.runtime.tracer.api.component.ComponentTracer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ public abstract class AbstractMessageProcessorChainBuilder implements MessagePro
   protected FlowExceptionHandler messagingExceptionHandler;
   protected ComponentLocation location;
   protected MuleContext muleContext;
-  protected InitialSpanInfo chainInitialSpanInfo;
+  protected ComponentTracer chainComponentTracer;
 
   // Argument is of type Object because it could be a MessageProcessor or a MessageProcessorBuilder
   protected Processor initializeMessageProcessor(Object processor) {
@@ -65,8 +65,7 @@ public abstract class AbstractMessageProcessorChainBuilder implements MessagePro
   }
 
   @Override
-  public void setChainInitialSpanInfo(
-                                      InitialSpanInfo chainInitialSpanInfo) {
-    this.chainInitialSpanInfo = chainInitialSpanInfo;
+  public void setComponentTracer(ComponentTracer chainComponentTracer) {
+    this.chainComponentTracer = chainComponentTracer;
   }
 }

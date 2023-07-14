@@ -18,6 +18,7 @@ import static org.mule.runtime.core.api.config.MuleProperties.COMPATIBILITY_PLUG
 import static org.mule.runtime.core.api.config.MuleProperties.FORWARD_COMPATIBILITY_HELPER_KEY;
 import static org.mule.runtime.core.api.config.MuleProperties.LOCAL_OBJECT_LOCK_FACTORY;
 import static org.mule.runtime.core.api.config.MuleProperties.LOCAL_OBJECT_STORE_MANAGER;
+import static org.mule.runtime.core.api.config.MuleProperties.MULE_CORE_COMPONENT_TRACER_FACTORY_KEY;
 import static org.mule.runtime.core.api.config.MuleProperties.MULE_CORE_EVENT_TRACER_KEY;
 import static org.mule.runtime.core.api.config.MuleProperties.MULE_CORE_EXPORTER_FACTORY_KEY;
 import static org.mule.runtime.core.api.config.MuleProperties.MULE_CORE_SPAN_FACTORY_KEY;
@@ -148,6 +149,7 @@ import org.mule.runtime.module.extension.internal.type.catalog.DefaultArtifactTy
 import org.mule.runtime.tracer.customization.impl.provider.DefaultInitialSpanInfoProvider;
 import org.mule.runtime.tracer.exporter.impl.OpenTelemetrySpanExporterFactory;
 import org.mule.runtime.tracer.exporter.impl.optel.config.OpenTelemetryAutoConfigurableSpanExporterConfiguration;
+import org.mule.runtime.tracer.impl.CoreComponentTracerFactory;
 import org.mule.runtime.tracer.impl.CoreEventTracer;
 import org.mule.runtime.tracer.impl.span.factory.ExecutionSpanFactory;
 import org.mule.runtime.tracing.level.impl.config.FileTracingLevelConfiguration;
@@ -245,6 +247,7 @@ public class SpringMuleContextServiceConfigurator extends AbstractSpringMuleCont
       .put(MULE_CORE_SPAN_FACTORY_KEY, getBeanDefinition(ExecutionSpanFactory.class))
       .put(MULE_CORE_EXPORTER_FACTORY_KEY, getBeanDefinition(OpenTelemetrySpanExporterFactory.class))
       .put(MULE_CORE_EVENT_TRACER_KEY, getBeanDefinition(CoreEventTracer.class))
+      .put(MULE_CORE_COMPONENT_TRACER_FACTORY_KEY, getBeanDefinition(CoreComponentTracerFactory.class))
       .put(MULE_METER_PROVIDER_KEY, resolveMeterProvider())
       .put(MULE_METER_EXPORTER_CONFIGURATION_KEY,
            getBeanDefinition(OpenTelemetryAutoConfigurableMeterExporterConfiguration.class))

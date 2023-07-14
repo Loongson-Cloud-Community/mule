@@ -46,7 +46,7 @@ import static org.mule.runtime.core.api.config.builders.RegistryBootstrap.defaul
 import static org.mule.runtime.core.internal.context.DefaultMuleContext.LOCAL_QUEUE_MANAGER_KEY;
 import static org.mule.runtime.core.internal.exception.ErrorTypeLocatorFactory.createDefaultErrorTypeLocator;
 import static org.mule.runtime.core.internal.interception.InterceptorManager.INTERCEPTOR_MANAGER_REGISTRY_KEY;
-import static org.mule.runtime.core.internal.profiling.DummyInitialSpanInfoProvider.getDummyInitialSpanInfoProvider;
+import static org.mule.runtime.core.internal.profiling.DummyComponentTracerFactory.getDummyComponentTracerFactory;
 import static org.mule.runtime.core.internal.profiling.NoopCoreEventTracer.getNoopCoreEventTracer;
 import static org.mule.runtime.core.internal.util.store.DefaultObjectStoreFactoryBean.createDefaultInMemoryObjectStore;
 import static org.mule.runtime.core.internal.util.store.DefaultObjectStoreFactoryBean.createDefaultPersistentObjectStore;
@@ -108,6 +108,7 @@ import org.mule.runtime.core.privileged.registry.RegistrationException;
 import org.mule.runtime.core.privileged.transformer.ExtendedTransformationService;
 import org.mule.runtime.core.privileged.transformer.TransformersRegistry;
 import org.mule.runtime.tracer.api.EventTracer;
+import org.mule.runtime.tracer.api.component.ComponentTracerFactory;
 import org.mule.runtime.tracer.customization.api.InitialSpanInfoProvider;
 import org.mule.runtime.tracer.exporter.api.SpanExporterFactory;
 
@@ -318,8 +319,8 @@ public class MinimalConfigurationBuilder extends AbstractConfigurationBuilder {
   }
 
   private void configureCoreTracerCustomization(MuleContext muleContext) throws RegistrationException {
-    InitialSpanInfoProvider initialSpanInfoProvider = getDummyInitialSpanInfoProvider();
-    registerObject(MULE_TRACER_INITIAL_SPAN_INFO_PROVIDER_KEY, initialSpanInfoProvider, muleContext);
+    ComponentTracerFactory componentTracerFactory = getDummyComponentTracerFactory();
+    registerObject(MULE_TRACER_INITIAL_SPAN_INFO_PROVIDER_KEY, componentTracerFactory, muleContext);
   }
 
   protected void configureCoreTracer(MuleContext muleContext) throws RegistrationException {

@@ -76,9 +76,10 @@ import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
+import org.mule.runtime.tracer.api.component.ComponentTracer;
+import org.mule.runtime.tracer.api.component.ComponentTracerFactory;
 import org.mule.runtime.tracer.api.EventTracer;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
-import org.mule.runtime.tracer.customization.api.InitialSpanInfoProvider;
+
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 
@@ -93,7 +94,7 @@ public abstract class TemplateOnErrorHandler extends AbstractDeclaredExceptionLi
   private static final Logger LOGGER = getLogger(TemplateOnErrorHandler.class);
 
   private static final Pattern ERROR_HANDLER_LOCATION_PATTERN = compile("[^/]*/[^/]*/[^/]*");
-  private InitialSpanInfo initialSpanInfo;
+  private ComponentTracer componentTracer;
 
   private boolean fromGlobalErrorHandler = false;
 
@@ -110,7 +111,7 @@ public abstract class TemplateOnErrorHandler extends AbstractDeclaredExceptionLi
   private InternalProfilingService profilingService;
 
   @Inject
-  private InitialSpanInfoProvider initialSpanInfoProvider;
+  private ComponentTracerFactory componentTracerFactory;
 
   private EventTracer<CoreEvent> coreEventEventTracer;
 
@@ -153,9 +154,7 @@ public abstract class TemplateOnErrorHandler extends AbstractDeclaredExceptionLi
         onErrorFlux = onErrorFlux.transformDeferred(TemplateOnErrorHandler.this::route);
       } else {
         // We need to start the tracing that would be started by the on error handler MessageProcessorChain.
-        onErrorFlux = onErrorFlux.doOnNext(coreEvent -> coreEventEventTracer
-            .startComponentSpan(coreEvent,
-                                initialSpanInfo));
+        onErrorFlux = onErrorFlux.doOnNext(coreEvent -> componentTracer.startSpan(coreEvent));
       }
 
       onErrorFlux = Flux.from(publisherPostProcessor
@@ -171,7 +170,7 @@ public abstract class TemplateOnErrorHandler extends AbstractDeclaredExceptionLi
                   // We end the current span verifying that the name of the current span is the expected.
                   coreEventEventTracer
                       .endCurrentSpan(result,
-                                      new SpanNameAssertion(initialSpanInfo.getName()));
+                                      new SpanNameAssertion(componentTracer.getName()));
                 }
                 ErrorHandlerContextManager.resolveHandling(TemplateOnErrorHandler.this, result);
               })))
@@ -206,7 +205,7 @@ public abstract class TemplateOnErrorHandler extends AbstractDeclaredExceptionLi
 
   @Override
   public synchronized void initialise() throws InitialisationException {
-    initialSpanInfo = initialSpanInfoProvider.getInitialSpanInfo(TemplateOnErrorHandler.this);
+    componentTracer = componentTracerFactory.fromComponent(TemplateOnErrorHandler.this);
     coreEventEventTracer = profilingService.getCoreEventTracer();
     super.initialise();
   }
@@ -349,7 +348,7 @@ public abstract class TemplateOnErrorHandler extends AbstractDeclaredExceptionLi
     }
     configuredMessageProcessors =
         buildNewChainWithListOfProcessors(processingStrategy, getMessageProcessors(), NullExceptionHandler.getInstance(),
-                                          initialSpanInfo);
+                                          componentTracer);
 
     fluxFactory = new OnErrorHandlerFluxObjectFactory(processingStrategy);
 

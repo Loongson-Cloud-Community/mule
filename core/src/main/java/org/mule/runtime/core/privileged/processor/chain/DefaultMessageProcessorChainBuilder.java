@@ -6,15 +6,16 @@
  */
 package org.mule.runtime.core.privileged.processor.chain;
 
-import static java.util.Collections.singletonList;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
 import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.disposeIfNeeded;
 import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.initialiseIfNeeded;
 import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.startIfNeeded;
 import static org.mule.runtime.core.api.lifecycle.LifecycleUtils.stopIfNeeded;
 import static org.mule.runtime.core.internal.processor.strategy.BlockingProcessingStrategyFactory.BLOCKING_PROCESSING_STRATEGY_INSTANCE;
+
+import static java.util.Collections.singletonList;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 
 import org.mule.api.annotation.NoExtend;
 import org.mule.runtime.api.component.location.ComponentLocation;
@@ -30,6 +31,8 @@ import org.mule.runtime.core.api.processor.InterceptingMessageProcessor;
 import org.mule.runtime.core.api.processor.Processor;
 import org.mule.runtime.core.api.processor.strategy.ProcessingStrategy;
 import org.mule.runtime.core.privileged.processor.MessageProcessorBuilder;
+import org.mule.runtime.core.privileged.profiling.tracing.ComponentTracerAware;
+import org.mule.runtime.tracer.api.component.ComponentTracer;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -37,8 +40,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.mule.runtime.core.privileged.profiling.tracing.InitialSpanInfoAware;
-import org.mule.runtime.tracer.api.span.info.InitialSpanInfo;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +57,7 @@ import org.slf4j.LoggerFactory;
  */
 @NoExtend
 public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcessorChainBuilder
-    implements InitialSpanInfoAware {
+    implements ComponentTracerAware {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultMessageProcessorChainBuilder.class);
 
@@ -116,46 +117,46 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
 
   protected MessageProcessorChain createSimpleChain(List<Processor> tempList,
                                                     Optional<ProcessingStrategy> processingStrategyOptional) {
+    DefaultMessageProcessorChain messageProcessorChain;
+
     if (tempList.size() == 1 && tempList.get(0) instanceof DefaultMessageProcessorChain) {
-      DefaultMessageProcessorChain messageProcessorChain = (DefaultMessageProcessorChain) tempList.get(0);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
-      }
-      return messageProcessorChain;
+      messageProcessorChain = (DefaultMessageProcessorChain) tempList.get(0);
     } else {
-      DefaultMessageProcessorChain messageProcessorChain =
+      messageProcessorChain =
           new DefaultMessageProcessorChain(name != null ? "(chain) of " + name : "(chain)",
                                            processingStrategyOptional,
                                            new ArrayList<>(tempList),
                                            messagingExceptionHandler,
                                            location);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
-      }
-      return messageProcessorChain;
     }
+
+    if (chainComponentTracer != null) {
+      messageProcessorChain.setComponentTracer(chainComponentTracer);
+    }
+
+    return messageProcessorChain;
   }
 
   private MessageProcessorChain createSimpleInterceptedChain(List<Processor> tempList,
                                                              Optional<ProcessingStrategy> processingStrategyOptional) {
+    DefaultMessageProcessorChain messageProcessorChain;
+
     if (tempList.size() == 1 && tempList.get(0) instanceof DefaultMessageProcessorChain) {
-      DefaultMessageProcessorChain messageProcessorChain = (DefaultMessageProcessorChain) tempList.get(0);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
-      }
-      return messageProcessorChain;
+      messageProcessorChain = (DefaultMessageProcessorChain) tempList.get(0);
     } else {
-      DefaultMessageProcessorChain messageProcessorChain =
+      messageProcessorChain =
           new DefaultMessageProcessorChain(name != null ? "(chain) of " + name : "(chain)",
                                            processingStrategyOptional,
                                            new ArrayList<>(tempList),
                                            NullExceptionHandler.getInstance(),
                                            location);
-      if (chainInitialSpanInfo != null) {
-        messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
-      }
-      return messageProcessorChain;
     }
+
+    if (chainComponentTracer != null) {
+      messageProcessorChain.setComponentTracer(chainComponentTracer);
+    }
+
+    return messageProcessorChain;
   }
 
   protected MessageProcessorChain createInterceptingChain(Processor head, List<Processor> processors,
@@ -165,9 +166,10 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
                                               ofNullable(processingStrategy), head,
                                               processors, processorsForLifecycle, NullExceptionHandler.getInstance(),
                                               location);
-    if (chainInitialSpanInfo != null) {
-      messageProcessorChain.setInitialSpanInfo(chainInitialSpanInfo);
+    if (chainComponentTracer != null) {
+      messageProcessorChain.setComponentTracer(chainComponentTracer);
     }
+
     return messageProcessorChain;
   }
 
@@ -205,8 +207,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
   }
 
   @Override
-  public void setInitialSpanInfo(InitialSpanInfo initialSpanInfo) {
-    this.chainInitialSpanInfo = initialSpanInfo;
+  public void setComponentTracer(ComponentTracer componentTracer) {
+    this.chainComponentTracer = componentTracer;
   }
 
   @NoExtend
@@ -313,13 +315,13 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
   }
 
   private static final class LazyProcessorChainBuilder extends AbstractMessageProcessorChain
-      implements MessagingExceptionHandlerAware, InitialSpanInfoAware {
+      implements MessagingExceptionHandlerAware {
 
     private final AbstractMessageProcessorChainBuilder chainBuilder;
     private final Supplier<ProcessingStrategy> processingStrategySupplier;
     private FlowExceptionHandler messagingExceptionHandler;
     private MessageProcessorChain delegate;
-    private InitialSpanInfo chainInitialSpanInfo;
+    private ComponentTracer chainComponentTracer;
 
     private LazyProcessorChainBuilder(String name, Optional<ProcessingStrategy> processingStrategyOptional,
                                       List<Processor> processors,
@@ -334,7 +336,7 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
     public void initialise() throws InitialisationException {
       chainBuilder.setProcessingStrategy(processingStrategySupplier.get());
       chainBuilder.setMessagingExceptionHandler(messagingExceptionHandler);
-      chainBuilder.setChainInitialSpanInfo(chainInitialSpanInfo);
+      chainBuilder.setComponentTracer(chainComponentTracer);
       delegate = chainBuilder.build();
       delegate.setAnnotations(getAnnotations());
       initialiseIfNeeded(delegate, muleContext);
@@ -372,8 +374,8 @@ public class DefaultMessageProcessorChainBuilder extends AbstractMessageProcesso
     }
 
     @Override
-    public void setInitialSpanInfo(InitialSpanInfo chainInitialSpanInfo) {
-      this.chainInitialSpanInfo = chainInitialSpanInfo;
+    public void setComponentTracer(ComponentTracer chainComponentTracer) {
+      this.chainComponentTracer = chainComponentTracer;
     }
   }
 
