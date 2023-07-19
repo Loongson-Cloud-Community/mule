@@ -247,7 +247,9 @@ public class MuleDeploymentService implements DeploymentService {
 
   @Override
   public void stop() {
-    deploymentDirectoryWatcher.stop();
+    if (!voltronMode) {
+      deploymentDirectoryWatcher.stop();
+    }
     artifactStartExecutor.ifComputed(ExecutorService::shutdownNow);
   }
 
@@ -551,10 +553,10 @@ public class MuleDeploymentService implements DeploymentService {
   }
 
   @Override
-  public void deploy(ArtifactAst artifactAst, String appName) {
+  public void deploy(ArtifactAst artifactAst, String appName, Optional<Properties> deploymentProperties) {
     Application application = null;
     try {
-      application = integrationFactory.createArtifact(MuleFoldersUtil.getAppFolder(appName), artifactAst);
+      application = integrationFactory.createArtifact(MuleFoldersUtil.getAppFolder(appName), artifactAst, deploymentProperties);
       // TODO review how to properly do this.
       applications.add(application);
       // TODO apply all this logic in the same way it's being applied for regular Mule Apps.

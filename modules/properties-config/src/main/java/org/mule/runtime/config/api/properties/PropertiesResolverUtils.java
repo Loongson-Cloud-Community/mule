@@ -138,10 +138,11 @@ public class PropertiesResolverUtils {
         .filter(service -> PROVIDER_FACTORY_IFACE_OLD == null || !PROVIDER_FACTORY_IFACE_OLD.isAssignableFrom(service.getClass()))
         .forEach(service -> {
           ComponentIdentifier componentIdentifier = service.getSupportedComponentIdentifier();
-          if (providerFactoriesMap.containsKey(componentIdentifier)) {
-            throw new MuleRuntimeException(createStaticMessage("Multiple configuration providers for component: "
-                + componentIdentifier));
-          }
+          // TODO review why from Deployer Service there's a duplicate class being loaded
+          // if (providerFactoriesMap.containsKey(componentIdentifier)) {
+          // throw new MuleRuntimeException(createStaticMessage("Multiple configuration providers for component: "
+          // + componentIdentifier));
+          // }
           providerFactoriesMap.put(componentIdentifier, service);
         });
 
